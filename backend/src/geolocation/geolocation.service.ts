@@ -23,7 +23,25 @@ export class GeolocationService {
 
   async getLocationFromIP(ipAddress: string): Promise<GeolocationData> {
     try {
-      // Skip geolocation for localhost/private IPs
+      // If localhost in development, fetch user's actual public IP
+      if (this.isPrivateIP(ipAddress) && process.env.NODE_ENV === 'development') {
+        console.log('🌐 Localhost detected, fetching your actual public IP...');
+        try {
+          const publicIP = await this.getPublicIP();
+          console.log('✅ Your public IP:', publicIP);
+          return await this.fetchLocationData(publicIP);
+        } catch (error) {
+          console.error('❌ Could not fetch public IP:', error.message);
+          return {
+            ip: ipAddress,
+            country: 'Local',
+            city: 'Localhost',
+            region: 'Development',
+          };
+        }
+      }
+
+      // Skip geolocation for localhost/private IPs in production
       if (this.isPrivateIP(ipAddress)) {
         return {
           ip: ipAddress,
@@ -33,31 +51,42 @@ export class GeolocationService {
         };
       }
 
-      const response = await axios.get(`${this.apiUrl}/${ipAddress}/json/`, {
-        timeout: 5000,
-      });
-
-      const data = response.data;
-
-      return {
-        ip: ipAddress,
-        country: data.country_name || data.country,
-        city: data.city,
-        region: data.region,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        timezone: data.timezone,
-        isp: data.org || data.isp,
-      };
+      return await this.fetchLocationData(ipAddress);
     } catch (error) {
       console.error('Geolocation API error:', error.message);
-      // Return basic info if API fails
       return {
         ip: ipAddress,
         country: 'Unknown',
         city: 'Unknown',
       };
     }
+  }
+
+  private async getPublicIP(): Promise<string> {
+    // Get the user's actual public IP address
+    const response = await axios.get('https://api.ipify.org?format=json', {
+      timeout: 3000,
+    });
+    return response.data.ip;
+  }
+
+  private async fetchLocationData(ipAddress: string): Promise<GeolocationData> {
+    const response = await axios.get(`${this.apiUrl}/${ipAddress}/json/`, {
+      timeout: 5000,
+    });
+
+    const data = response.data;
+
+    return {
+      ip: ipAddress,
+      country: data.country_name || data.country,
+      city: data.city,
+      region: data.region,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      timezone: data.timezone,
+      isp: data.org || data.isp,
+    };
   }
 
   private isPrivateIP(ip: string): boolean {

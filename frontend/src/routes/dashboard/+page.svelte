@@ -9,6 +9,11 @@
 		ip_address: string;
 		country?: string;
 		city?: string;
+		region?: string;
+		latitude?: number;
+		longitude?: number;
+		timezone?: string;
+		isp?: string;
 		browser?: string;
 		device?: string;
 		os?: string;
@@ -67,13 +72,25 @@
 	}
 
 	function getLocation(attempt: SignInAttempt): string {
-		if (attempt.city && attempt.country) {
-			return `${attempt.city}, ${attempt.country}`;
+		const parts = [];
+		if (attempt.city) parts.push(attempt.city);
+		if (attempt.region) parts.push(attempt.region);
+		if (attempt.country) parts.push(attempt.country);
+		return parts.length > 0 ? parts.join(', ') : 'Unknown';
+	}
+
+	function getCoordinates(attempt: SignInAttempt): string {
+		if (attempt.latitude && attempt.longitude) {
+			return `${attempt.latitude.toFixed(4)}, ${attempt.longitude.toFixed(4)}`;
 		}
-		if (attempt.country) {
-			return attempt.country;
+		return 'N/A';
+	}
+
+	function getMapLink(attempt: SignInAttempt): string {
+		if (attempt.latitude && attempt.longitude) {
+			return `https://www.google.com/maps?q=${attempt.latitude},${attempt.longitude}`;
 		}
-		return 'Unknown';
+		return '#';
 	}
 </script>
 
@@ -130,9 +147,13 @@
 								<th>Date & Time</th>
 								<th>IP Address</th>
 								<th>Location</th>
+								<th>Coordinates</th>
+								<th>Timezone</th>
+								<th>ISP</th>
 								<th>Browser</th>
 								<th>Device</th>
 								<th>OS</th>
+								<th>Map</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -146,11 +167,35 @@
 										{/if}
 									</td>
 									<td>{formatDate(attempt.timestamp)}</td>
-									<td><code>{attempt.ip_address}</code></td>
-									<td>{getLocation(attempt)}</td>
+									<td><code class="ip-code">{attempt.ip_address}</code></td>
+									<td>
+										<div class="location-cell">
+											<span class="location-text">{getLocation(attempt)}</span>
+										</div>
+									</td>
+									<td>
+										<code class="coords-code">{getCoordinates(attempt)}</code>
+									</td>
+									<td>{attempt.timezone || 'N/A'}</td>
+									<td class="isp-cell">{attempt.isp || 'Unknown'}</td>
 									<td>{attempt.browser || 'Unknown'}</td>
 									<td>{attempt.device || 'Unknown'}</td>
 									<td>{attempt.os || 'Unknown'}</td>
+									<td>
+										{#if attempt.latitude && attempt.longitude}
+											<a 
+												href={getMapLink(attempt)} 
+												target="_blank" 
+												rel="noopener noreferrer"
+												class="map-link"
+												title="View on Google Maps"
+											>
+												🗺️ View
+											</a>
+										{:else}
+											<span class="text-muted">N/A</span>
+										{/if}
+									</td>
 								</tr>
 							{/each}
 						</tbody>
@@ -301,6 +346,68 @@
 		padding: 1rem 1.5rem;
 		border-bottom: 1px solid #e9ecef;
 		color: #495057;
+		font-size: 0.9rem;
+	}
+
+	.ip-code {
+		background: #f1f3f5;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+		font-family: 'Courier New', monospace;
+		font-size: 0.875rem;
+		color: #495057;
+	}
+
+	.coords-code {
+		background: #e7f5ff;
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+		font-family: 'Courier New', monospace;
+		font-size: 0.875rem;
+		color: #1971c2;
+	}
+
+	.location-cell {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.location-text {
+		font-weight: 500;
+	}
+
+	.isp-cell {
+		max-width: 200px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-size: 0.875rem;
+		color: #868e96;
+	}
+
+	.map-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.375rem 0.75rem;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		color: white;
+		text-decoration: none;
+		border-radius: 6px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		transition: all 0.2s ease;
+	}
+
+	.map-link:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+	}
+
+	.text-muted {
+		color: #adb5bd;
+		font-size: 0.875rem;
 	}
 
 	.attempts-table tbody tr {
