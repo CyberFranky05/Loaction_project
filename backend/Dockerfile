@@ -1,20 +1,24 @@
-﻿FROM ubuntu:22.04 AS builder
+﻿# Base stage with Node.js
+FROM node:20-slim AS base
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends dumb-init && \
+    rm -rf /var/lib/apt/lists/*
+
+# Builder stage
+FROM base AS builder
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci && npm cache clean --force
+RUN npm install && npm cache clean --force
 
 COPY . .
 COPY .env.production .env
 
 RUN npm run build
 
-FROM ubuntu:22.04 AS production
-
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates dumb-init && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs && rm -rf /var/lib/apt/lists/*
+# Production stage
+FROM base AS production
 
 RUN groupadd -g 1001 nodejs && useradd -r -u 1001 -g nodejs nodejs
 
@@ -23,6 +27,7 @@ WORKDIR /app
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
 COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/.env ./.env
 
 RUN chown -R nodejs:nodejs /app
 
