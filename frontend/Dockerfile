@@ -1,4 +1,4 @@
-﻿FROM node:20-alpine AS builder
+﻿FROM node:20-slim AS builder
 
 WORKDIR /app
 
@@ -10,11 +10,11 @@ COPY .env.production .env
 
 RUN npm run build
 
-FROM node:20-alpine AS production
+FROM node:20-slim AS production
 
-RUN apk add --no-cache dumb-init
+RUN apt-get update && apt-get install -y --no-install-recommends dumb-init && rm -rf /var/lib/apt/lists/*
 
-RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+RUN groupadd -g 1001 nodejs && useradd -r -u 1001 -g nodejs nodejs
 
 WORKDIR /app
 
