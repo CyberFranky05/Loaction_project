@@ -1,4 +1,12 @@
-﻿FROM node:20-slim AS builder
+﻿FROM ubuntu:22.04 AS builder
+
+# Install Node.js 20
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -10,9 +18,16 @@ COPY .env.production .env
 
 RUN npm run build
 
-FROM node:20-slim AS production
+FROM ubuntu:22.04 AS production
 
-RUN apt-get update && apt-get install -y --no-install-recommends dumb-init && rm -rf /var/lib/apt/lists/*
+# Install Node.js 20 and dumb-init
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    dumb-init \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 1001 nodejs && useradd -r -u 1001 -g nodejs nodejs
 
