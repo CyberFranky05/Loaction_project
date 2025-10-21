@@ -1,4 +1,4 @@
-# ✅ Frontend Docker - Build & Test Results
+# ✅ Frontend Docker - Build & Test Results (Ubuntu 22.04)
 
 ## 🎯 Status: **SUCCESS**
 
@@ -7,9 +7,10 @@
 ## 📦 Build Information
 
 **Image Name:** `location-auth-frontend:latest`
-**Image Size:** 325MB
-**Base Image:** node:20-slim (Debian-based)
-**Build Time:** ~13 seconds (with cache)
+**Image Size:** 435MB
+**Base Image:** ubuntu:22.04 (Pure Ubuntu LTS)
+**Node.js Version:** v20.19.5 (from NodeSource)
+**Build Time:** ~817 seconds (13 minutes, first build without cache)
 
 ---
 
@@ -18,9 +19,10 @@
 ### ✅ Build Test
 ```
 ✓ Multi-stage build completed successfully
+✓ Node.js 20 installed from NodeSource
 ✓ All dependencies installed
 ✓ SvelteKit build successful
-✓ Production image created
+✓ Production image created with Ubuntu 22.04
 ```
 
 ### ✅ Runtime Test
@@ -30,15 +32,18 @@
 ✓ Port 3000 exposed and accessible
 ✓ HTTP 200 OK response received
 ✓ Full HTML page rendered
+✓ OS: Ubuntu 22.04.5 LTS (Jammy Jellyfish)
+✓ Node.js: v20.19.5
 ```
 
 ### ✅ Container Details
 ```
-Container ID: 4d45e3827445
+Container ID: 92b03b5e2c0a
 Status: Up and running (healthy)
 Port Mapping: 0.0.0.0:3000 -> 3000/tcp
-User: nodejs (non-root)
+User: nodejs (non-root, UID 1001)
 Entrypoint: dumb-init
+OS: Ubuntu 22.04.5 LTS
 ```
 
 ---
