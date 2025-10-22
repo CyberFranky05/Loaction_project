@@ -53,10 +53,8 @@ if [ "$DEPLOY_TYPE" = "1" ]; then
     
     # Verify DNS configuration
     echo "⚠️  Before continuing, ensure DNS records are configured:"
-    echo "   - mrelectron.xyz → Your EC2 IP"
-    echo "   - app.mrelectron.xyz → Your EC2 IP"
-    echo "   - api.mrelectron.xyz → Your EC2 IP"
-    echo "   - auth.mrelectron.xyz → Your EC2 IP"
+    echo "   - mrelectron.xyz → 13.200.149.67 (Your EC2 IP)"
+    echo "   - www.mrelectron.xyz → 13.200.149.67"
     echo ""
     read -p "Are DNS records configured? (yes/no): " DNS_READY
     
@@ -108,7 +106,7 @@ if [ "$DEPLOY_TYPE" = "1" ]; then
     echo "Please follow these steps to configure Keycloak:"
     echo ""
     echo "1. Access Keycloak Admin Console:"
-    echo "   URL: https://auth.mrelectron.xyz"
+    echo "   URL: https://mrelectron.xyz/auth"
     echo "   Username: admin"
     echo "   Password: (from .env.production KEYCLOAK_ADMIN_PASSWORD)"
     echo ""
@@ -166,8 +164,8 @@ echo "================================================"
 echo ""
 echo "Access your application:"
 echo "  - Frontend: https://mrelectron.xyz"
-echo "  - API: https://api.mrelectron.xyz/api/v1/health"
-echo "  - Keycloak: https://auth.mrelectron.xyz"
+echo "  - API: https://mrelectron.xyz/api/v1/health"
+echo "  - Keycloak: https://mrelectron.xyz/auth"
 echo ""
 echo "View logs:"
 echo "  docker-compose -f docker-compose.prod.yml logs -f"

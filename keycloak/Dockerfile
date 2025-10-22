@@ -21,7 +21,7 @@ COPY --from=builder /opt/keycloak/ /opt/keycloak/
 USER 1000
 
 # Production environment variables
-ENV KC_HOSTNAME=auth.mrelectron.xyz
+ENV KC_HOSTNAME=mrelectron.xyz
 ENV KC_HOSTNAME_STRICT=false
 ENV KC_HTTP_ENABLED=true
 ENV KC_HEALTH_ENABLED=true
