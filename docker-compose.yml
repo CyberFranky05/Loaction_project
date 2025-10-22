@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # Keycloak service - start first (with auto-configuration)
+  keycloak:
+    build:
+      context: ./keycloak
+      dockerfile: Dockerfile.dev
+    image: location-auth-keycloak:dev
+    container_name: location-auth-keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_HTTP_ENABLED=true
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_STRICT_HTTPS=false
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 120s
+
+  # Backend service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+      target: development
+    image: location-auth-backend:latest
+    container_name: location-auth-backend
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=location-auth-realm
+      - KEYCLOAK_CLIENT_ID=location-auth-backend
+      - KEYCLOAK_CLIENT_SECRET=exMhUVzUVOsdkHABg23cDxr9WrLLJWEB
+      - KEYCLOAK_USER_CLIENT_ID=location-auth-frontend
+      - CORS_ORIGIN=http://localhost:3000
+      - PORT=3000
+      - HOST=0.0.0.0
+      - JWT_SECRET=local-dev-jwt-secret-change-in-production
+      - SUPABASE_URL=${SUPABASE_URL:-https://xxxxx.supabase.co}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-your-key-here}
+    volumes:
+      - ./backend/src:/app/src
+    networks:
+      - app-network
+    restart: unless-stopped
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+      target: development
+    image: location-auth-frontend:latest
+    container_name: location-auth-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PUBLIC_API_URL=http://localhost:3001/api/v1
+      - PUBLIC_KEYCLOAK_URL=http://localhost:8080
+      - PUBLIC_KEYCLOAK_REALM=location-auth-realm
+      - PUBLIC_KEYCLOAK_CLIENT_ID=location-auth-frontend
+      - PUBLIC_SUPABASE_URL=${SUPABASE_URL:-https://xxxxx.supabase.co}
+      - PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-your-anon-key-here}
+    volumes:
+      - ./frontend/src:/app/src
+    networks:
+      - app-network
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+networks:
+  app-network:
+    driver: bridge

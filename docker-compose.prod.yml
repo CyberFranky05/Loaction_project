@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Keycloak
+  postgres:
+    image: postgres:16-alpine
+    container_name: location-auth-postgres
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Keycloak (Production with PostgreSQL)
+  keycloak:
+    build:
+      context: ./keycloak
+      dockerfile: Dockerfile
+    image: location-auth-keycloak:prod
+    container_name: location-auth-keycloak
+    environment:
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=${POSTGRES_PASSWORD}
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KC_HOSTNAME=auth.mrelectron.xyz
+      - KC_HOSTNAME_STRICT=false
+      - KC_PROXY=edge
+      - KC_HTTP_ENABLED=true
+    networks:
+      - app-network
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: location-auth-backend:prod
+    container_name: location-auth-backend
+    environment:
+      - NODE_ENV=production
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=location-auth-realm
+      - KEYCLOAK_CLIENT_ID=location-auth-backend
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_CLIENT_SECRET}
+      - KEYCLOAK_USER_CLIENT_ID=location-auth-frontend
+      - CORS_ORIGIN=https://mrelectron.xyz,https://app.mrelectron.xyz
+      - PORT=3000
+      - HOST=0.0.0.0
+      - JWT_SECRET=${JWT_SECRET}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - IPAPI_URL=https://ipapi.co
+    networks:
+      - app-network
+    restart: unless-stopped
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: location-auth-frontend:prod
+    container_name: location-auth-frontend
+    environment:
+      - NODE_ENV=production
+      - PUBLIC_API_URL=https://api.mrelectron.xyz/api/v1
+      - PUBLIC_KEYCLOAK_URL=https://auth.mrelectron.xyz
+      - PUBLIC_KEYCLOAK_REALM=location-auth-realm
+      - PUBLIC_KEYCLOAK_CLIENT_ID=location-auth-frontend
+      - PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+      - PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    networks:
+      - app-network
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  # Nginx Reverse Proxy with SSL
+  nginx:
+    image: nginx:alpine
+    container_name: location-auth-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    networks:
+      - app-network
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - backend
+      - keycloak
+
+  # Certbot for SSL certificates
+  certbot:
+    image: certbot/certbot:latest
+    container_name: location-auth-certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    command: certonly --webroot --webroot-path=/var/www/certbot --email ${SSL_EMAIL} --agree-tos --no-eff-email -d mrelectron.xyz -d app.mrelectron.xyz -d api.mrelectron.xyz -d auth.mrelectron.xyz
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  certbot_www:
+    driver: local
+  certbot_conf:
+    driver: local

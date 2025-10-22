@@ -95,19 +95,30 @@ export class GeolocationService {
       return true;
     }
 
+    // Strip IPv6 prefix if present (::ffff:xxx.xxx.xxx.xxx)
+    let cleanIP = ip;
+    if (ip.startsWith('::ffff:')) {
+      cleanIP = ip.substring(7);
+    }
+
     // Check for private IPv4 ranges
     const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-    const match = ip.match(ipv4Regex);
+    const match = cleanIP.match(ipv4Regex);
 
     if (match) {
       const octets = match.slice(1).map(Number);
       // 10.0.0.0/8
       if (octets[0] === 10) return true;
-      // 172.16.0.0/12
+      // 172.16.0.0/12 (Docker default network range)
       if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) return true;
       // 192.168.0.0/16
       if (octets[0] === 192 && octets[1] === 168) return true;
+      // 127.0.0.0/8 (Loopback)
+      if (octets[0] === 127) return true;
     }
+
+    // Check for link-local addresses (169.254.0.0/16)
+    if (cleanIP.startsWith('169.254.')) return true;
 
     return false;
   }

@@ -37,7 +37,8 @@ export class KeycloakService {
     this.realm = this.configService.get<string>('KEYCLOAK_REALM') || '';
     this.clientId = this.configService.get<string>('KEYCLOAK_CLIENT_ID') || '';
     this.clientSecret = this.configService.get<string>('KEYCLOAK_CLIENT_SECRET') || '';
-    this.userClientId = this.configService.get<string>('KEYCLOAK_USER_CLIENT_ID') || this.clientId;
+    // Use frontend client for user authentication (password grant)
+    this.userClientId = this.configService.get<string>('KEYCLOAK_USER_CLIENT_ID') || 'location-auth-frontend';
   }
 
   private getTokenUrl(): string {
