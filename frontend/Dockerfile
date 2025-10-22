@@ -9,10 +9,10 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install && npm cache clean --force
 
-# Copy source code
+# Copy source code and build-time env vars
 COPY . .
 
-# Build the application
+# Build the application (PUBLIC_* vars are read from .env.production)
 RUN npm run build
 
 # Production stage

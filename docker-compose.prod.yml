@@ -80,14 +80,6 @@ services:
   frontend:
     image: mrelec1r0n/location-auth-frontend:latest
     container_name: location-auth-frontend
-    environment:
-      - NODE_ENV=production
-      - PUBLIC_API_URL=https://mrelectron.xyz/api/v1
-      - PUBLIC_KEYCLOAK_URL=https://mrelectron.xyz/auth
-      - PUBLIC_KEYCLOAK_REALM=location-auth-realm
-      - PUBLIC_KEYCLOAK_CLIENT_ID=location-auth-frontend
-      - PUBLIC_SUPABASE_URL=${SUPABASE_URL}
-      - PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
     networks:
       - app-network
     restart: unless-stopped
