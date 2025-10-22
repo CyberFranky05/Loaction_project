@@ -1,43 +1,41 @@
-﻿FROM ubuntu:22.04 AS builder
-
-# Install Node.js 20
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
+﻿# Builder stage - build SvelteKit app
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Copy package files
 COPY package*.json ./
-RUN npm ci && npm cache clean --force
 
+# Install dependencies
+RUN npm ci --quiet && npm cache clean --force
+
+# Copy source code
 COPY . .
-COPY .env.production .env
 
+# Build the application
 RUN npm run build
 
-FROM ubuntu:22.04 AS production
+# Production stage - minimal runtime image
+FROM node:20-alpine AS production
 
-# Install Node.js 20 and dumb-init
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    dumb-init \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
 
-RUN groupadd -g 1001 nodejs && useradd -r -u 1001 -g nodejs nodejs
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
 WORKDIR /app
 
+# Copy package files
+COPY package*.json ./
+
+# Install ONLY production dependencies
+RUN npm ci --omit=dev --quiet && npm cache clean --force
+
+# Copy built application from builder
 COPY --from=builder --chown=nodejs:nodejs /app/build ./build
-COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
 
-RUN npm ci --omit=dev && npm cache clean --force
-
+# Set ownership
 RUN chown -R nodejs:nodejs /app
 
 USER nodejs
@@ -48,7 +46,8 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 CMD node -e "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 ENTRYPOINT ["dumb-init", "--"]
 

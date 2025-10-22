@@ -1,5 +1,8 @@
 version: '3.8'
 
+# Docker Compose will automatically load .env file from the same directory
+# Make sure to rename .env.production to .env before deploying
+
 services:
   # PostgreSQL Database for Keycloak
   postgres:
