@@ -25,10 +25,7 @@ services:
 
   # Keycloak (Production with PostgreSQL)
   keycloak:
-    build:
-      context: ./keycloak
-      dockerfile: Dockerfile
-    image: location-auth-keycloak:prod
+    image: mrelec1r0n/location-auth-keycloak:latest
     container_name: location-auth-keycloak
     environment:
       - KC_DB=postgres
@@ -56,10 +53,7 @@ services:
 
   # Backend API
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: location-auth-backend:prod
+    image: mrelec1r0n/location-auth-backend:latest
     container_name: location-auth-backend
     environment:
       - NODE_ENV=production
@@ -84,10 +78,7 @@ services:
 
   # Frontend
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    image: location-auth-frontend:prod
+    image: mrelec1r0n/location-auth-frontend:latest
     container_name: location-auth-frontend
     environment:
       - NODE_ENV=production
