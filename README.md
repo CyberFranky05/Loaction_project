@@ -148,11 +148,11 @@ curl -I http://localhost
 docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
   --webroot \
   --webroot-path=/var/www/certbot \
-  --email piyushsingh5629@gmail.com \
+  --email mailid@email.com \
   --agree-tos \
   --no-eff-email \
-  -d mrelectron.xyz \
-  -d www.mrelectron.xyz
+  -d yourdomain.com \
+  -d www.yourdomain.com
 
 # 6. Switch back to HTTPS config
 sed -i 's|./nginx/nginx-http-only.conf:/etc/nginx/nginx.conf:ro|./nginx/nginx.conf:/etc/nginx/nginx.conf:ro|' docker-compose.prod.yml
