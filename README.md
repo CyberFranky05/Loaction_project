@@ -1,294 +1,267 @@
-# Location-Based Authentication System
+# Location-Based Authentication System - Production Deployment
 
-A full-stack authentication system that tracks user sign-in attempts with geolocation data, using Keycloak for authentication, Supabase as the database, SvelteKit for the frontend, and NestJS for the backend.
+This is a complete location-based authentication system with sign-in attempt tracking.
 
-## 🏗️ Technology Stack
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Frontend** | SvelteKit | UI framework with SSR support |
-| **Backend** | NestJS | Scalable Node.js API server |
-| **Database** | Supabase (PostgreSQL) | Data persistence with RLS |
-| **Auth Provider** | Keycloak | Identity & Access Management |
-| **Geolocation** | IPApi.co | IP to location conversion |
-
-## 📋 Features
-
-- ✅ User registration with real-time password policy validation
-- ✅ Secure authentication via Keycloak (OpenID Connect)
-- ✅ Automatic IP detection and geolocation tracking
-- ✅ Comprehensive sign-in attempt logging
-- ✅ Protected dashboard with detailed sign-in history
-- ✅ Row-level security in Supabase
-- ✅ Password policy enforcement with visual feedback
-
-## 🚀 Phase 1: Infrastructure Setup (CURRENT)
-
-### What's Included in Phase 1
-
-This phase sets up the foundational infrastructure:
-
-1. **Supabase Database** - Database schema, tables, and security policies
-2. **Keycloak Configuration** - Authentication server setup and client configuration
-3. **Environment Templates** - Configuration files for both frontend and backend
+## 🚀 Quick Start
 
 ### Prerequisites
+- Docker & Docker Compose installed
+- A domain name (for SSL/HTTPS)
+- Port 80 and 443 open
 
-Before starting, ensure you have:
+### 1. Clone the Repository
 
-- [ ] Node.js (v18 or higher)
-- [ ] Docker Desktop (for Keycloak)
-- [ ] Git
-- [ ] A Supabase account (free tier works)
-- [ ] PowerShell or terminal access
-
----
-
-## 📖 Setup Instructions
-
-### Step 1: Supabase Setup
-
-Follow the detailed guide: [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md)
-
-**Quick Steps:**
-1. Create a new Supabase project
-2. Execute the SQL schema from `database/schema.sql`
-3. Copy your API credentials (URL, anon key, service role key)
-4. Verify tables and RLS policies
-
-**Time Required:** ~10 minutes
-
----
-
-### Step 2: Keycloak Setup
-
-Follow the detailed guide: [`docs/KEYCLOAK_SETUP.md`](docs/KEYCLOAK_SETUP.md)
-
-**Quick Steps:**
-
-#### Docker Installation (Recommended)
-```powershell
-# Pull and run Keycloak
-docker pull quay.io/keycloak/keycloak:latest
-
-docker run -d `
-  --name location-auth-keycloak `
-  -p 8080:8080 `
-  -e KEYCLOAK_ADMIN=admin `
-  -e KEYCLOAK_ADMIN_PASSWORD=admin `
-  quay.io/keycloak/keycloak:latest `
-  start-dev
+```bash
+git clone https://github.com/CyberFranky05/Loaction_project.git
+cd Loaction_project
+git checkout production
 ```
 
-#### Configuration
-1. Access Keycloak at `http://localhost:8080`
-2. Login with `admin` / `admin`
-3. Create realm: `location-auth-realm`
-4. Create backend client: `location-auth-backend` (confidential)
-5. Create frontend client: `location-auth-frontend` (public)
-6. Configure password policies (min 8 chars, uppercase, lowercase, number, special char)
-7. Create a test user
+### 2. Configure Environment Variables
 
-**Time Required:** ~15-20 minutes
+Copy the example environment file:
 
----
+```bash
+cp .env.example .env
+```
 
-### Step 3: Environment Configuration
+Edit `.env` and fill in your values:
 
-#### Backend Configuration
+```bash
+# PostgreSQL (for Keycloak)
+POSTGRES_PASSWORD=your_strong_postgres_password
 
-1. Navigate to `backend/` folder
-2. Copy `.env.example` to `.env`:
-   ```powershell
-   Copy-Item backend\.env.example backend\.env
-   ```
-3. Edit `backend/.env` and fill in:
-   - `SUPABASE_URL` - From Supabase project settings
-   - `SUPABASE_SERVICE_ROLE_KEY` - From Supabase API settings
-   - `KEYCLOAK_CLIENT_SECRET` - From Keycloak backend client credentials
+# Keycloak Admin
+KEYCLOAK_ADMIN_PASSWORD=your_admin_password
 
-#### Frontend Configuration
+# Backend Secrets
+# NOTE: Realm is pre-configured with client secret "secret123"
+# You can change this later in Keycloak admin console
+KEYCLOAK_CLIENT_SECRET=secret123
+JWT_SECRET=your_jwt_secret
 
-1. Navigate to `frontend/` folder
-2. Copy `.env.example` to `.env`:
-   ```powershell
-   Copy-Item frontend\.env.example frontend\.env
-   ```
-3. Edit `frontend/.env` and fill in:
-   - `PUBLIC_SUPABASE_URL` - From Supabase project settings
-   - `PUBLIC_SUPABASE_ANON_KEY` - From Supabase API settings (anon/public key)
+# Your Domain
+DOMAIN=yourdomain.com
 
-**Time Required:** ~5 minutes
+# SSL Email (for Let's Encrypt)
+SSL_EMAIL=your@email.com
 
----
+# Supabase (Create free account at https://supabase.com)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_ANON_KEY=your_anon_key
+```
 
-## 🔍 Verification Checklist
+### 3. Setup Supabase Database
 
-Before proceeding to Phase 2, verify:
+1. Create a free account at [supabase.com](https://supabase.com)
+2. Create a new project
+3. Run this SQL in Supabase SQL Editor:
 
-### Supabase
-- [ ] Project created and accessible
-- [ ] Schema executed successfully
-- [ ] Tables visible: `users`, `sign_in_attempts`
-- [ ] RLS policies configured
-- [ ] API keys copied to `.env` files
-
-### Keycloak
-- [ ] Docker container running (`docker ps`)
-- [ ] Admin console accessible at `http://localhost:8080`
-- [ ] Realm created: `location-auth-realm`
-- [ ] Backend client created with secret
-- [ ] Frontend client created (public)
-- [ ] Password policies configured
-- [ ] Test user created
-- [ ] Client credentials copied to `.env` files
-
-### Environment Files
-- [ ] `backend/.env` exists with all values filled
-- [ ] `frontend/.env` exists with all values filled
-- [ ] No placeholder values remaining (`xxxxx`, `your-key-here`)
-
----
-
-## 🧪 Testing Phase 1 Setup
-
-### Test Supabase Connection
-
-Run this in Supabase SQL Editor:
 ```sql
--- Insert test data
-INSERT INTO users (keycloak_id, name, email) 
-VALUES ('test-123', 'Test User', 'test@example.com');
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  keycloak_id TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Verify
-SELECT * FROM users WHERE email = 'test@example.com';
+-- Create signin_attempts table
+CREATE TABLE IF NOT EXISTS signin_attempts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  ip_address TEXT,
+  country TEXT,
+  city TEXT,
+  region TEXT,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  timezone TEXT,
+  isp TEXT,
+  user_agent TEXT,
+  browser TEXT,
+  device TEXT,
+  os TEXT,
+  success BOOLEAN NOT NULL,
+  failure_reason TEXT,
+  timestamp TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Clean up
-DELETE FROM users WHERE email = 'test@example.com';
+-- Create indexes
+CREATE INDEX idx_signin_attempts_user_id ON signin_attempts(user_id);
+CREATE INDEX idx_signin_attempts_email ON signin_attempts(email);
+CREATE INDEX idx_signin_attempts_timestamp ON signin_attempts(timestamp DESC);
 ```
 
-### Test Keycloak
+4. Get your credentials from Settings → API
 
-Get an access token:
-```powershell
-curl -X POST "http://localhost:8080/realms/location-auth-realm/protocol/openid-connect/token" `
-  -H "Content-Type: application/x-www-form-urlencoded" `
-  -d "client_id=location-auth-backend" `
-  -d "client_secret=YOUR_CLIENT_SECRET" `
-  -d "grant_type=password" `
-  -d "username=testuser" `
-  -d "password=TestPass123!"
-```
+### 4. Configure Domain DNS
 
-Expected: JSON response with `access_token` field
-
----
-
-## 📁 Project Structure (After Phase 1)
+Point your domain to your server's IP:
 
 ```
-location_project/
-├── database/
-│   └── schema.sql                 # Supabase database schema
-├── docs/
-│   ├── KEYCLOAK_SETUP.md         # Keycloak setup guide
-│   └── SUPABASE_SETUP.md         # Supabase setup guide
-├── backend/
-│   └── .env.example              # Backend environment template
-├── frontend/
-│   └── .env.example              # Frontend environment template
-└── README.md                     # This file
+A Record: yourdomain.com → YOUR_SERVER_IP
+A Record: www.yourdomain.com → YOUR_SERVER_IP
 ```
 
----
+### 5. Start the Application
+
+```bash
+# Start all services
+docker-compose -f docker-compose.prod.yml up -d
+
+# Check if all services are running
+docker-compose -f docker-compose.prod.yml ps
+
+# View logs
+docker-compose -f docker-compose.prod.yml logs -f
+```
+
+### 6. Setup SSL Certificates
+
+Once your domain DNS is configured:
+
+```bash
+# Stop nginx temporarily
+docker-compose -f docker-compose.prod.yml stop nginx
+
+# Get SSL certificate
+docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
+  --standalone \
+  --email your@email.com \
+  --agree-tos \
+  --no-eff-email \
+  -d yourdomain.com \
+  -d www.yourdomain.com
+
+# Start nginx again
+docker-compose -f docker-compose.prod.yml start nginx
+```
+
+### 7. Verify Keycloak Realm Import
+
+The Keycloak realm (`location-auth-realm`) is **automatically imported** on first startup with:
+- ✅ Pre-configured clients: `location-auth-backend` and `location-auth-frontend`
+- ✅ Default roles: `user` and `admin`
+- ✅ Client secret: `secret123` (can be changed later)
+
+Access Keycloak admin console at: `https://yourdomain.com/auth/admin`
+- Username: `admin`
+- Password: (from your .env `KEYCLOAK_ADMIN_PASSWORD`)
+
+**No manual realm configuration needed!** The realm is imported automatically from `keycloak/realm-import.json`.
+
+## 📦 What's Included
+
+- **Frontend**: SvelteKit application (port 3000)
+- **Backend**: NestJS API (port 3000)
+- **Keycloak**: Authentication server (port 8080)
+- **PostgreSQL**: Database for Keycloak (port 5432)
+- **Nginx**: Reverse proxy with SSL (ports 80, 443)
+- **Certbot**: SSL certificate management
+
+## 🔧 Service URLs
+
+After deployment, your services will be available at:
+
+- **Frontend**: https://yourdomain.com
+- **Backend API**: https://yourdomain.com/api/v1
+- **Keycloak**: https://yourdomain.com/auth
+
+## 🛠️ Maintenance
+
+### View Logs
+```bash
+# All services
+docker-compose -f docker-compose.prod.yml logs -f
+
+# Specific service
+docker-compose -f docker-compose.prod.yml logs -f frontend
+```
+
+### Restart Services
+```bash
+# Restart all
+docker-compose -f docker-compose.prod.yml restart
+
+# Restart specific service
+docker-compose -f docker-compose.prod.yml restart backend
+```
+
+### Update Application
+```bash
+# Pull latest changes
+git pull origin production
+
+# Rebuild and restart
+docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+### Renew SSL Certificate
+```bash
+docker-compose -f docker-compose.prod.yml run --rm certbot renew
+docker-compose -f docker-compose.prod.yml restart nginx
+```
+
+## 🔒 Security Notes
+
+1. **Change all default passwords** in `.env`
+2. **Keep secrets safe** - never commit `.env` to git
+3. **Regular backups** of PostgreSQL and Supabase
+4. **Monitor logs** for suspicious activity
+5. **Update regularly** - keep Docker images updated
 
 ## 🐛 Troubleshooting
 
-### Keycloak Not Starting
-```powershell
-# Check if port 8080 is in use
-netstat -ano | findstr :8080
+### Services won't start
+```bash
+# Check logs
+docker-compose -f docker-compose.prod.yml logs
 
-# Restart container
-docker restart location-auth-keycloak
-
-# View logs
-docker logs location-auth-keycloak
+# Restart all services
+docker-compose -f docker-compose.prod.yml down
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
-### Supabase Connection Issues
-- Verify your IP isn't blocked (check Supabase dashboard)
-- Ensure you're using the correct API keys (service role for backend, anon for frontend)
-- Check RLS policies aren't blocking your queries
+### SSL Certificate issues
+```bash
+# Make sure port 80 is accessible
+# Check domain DNS is pointing to your server
+# Try standalone mode for certbot
+```
 
-### Environment Variables Not Loading
-- Ensure `.env` files are in the correct directories
-- Check for syntax errors (no spaces around `=`)
-- Restart your development servers after changing `.env`
+### Can't access Keycloak admin
+```bash
+# Check Keycloak is running
+docker-compose -f docker-compose.prod.yml logs keycloak
 
----
+# Verify realm import
+docker exec location-auth-keycloak ls /opt/keycloak/data/import/
+```
 
-## 🎯 Next Steps
+## 📝 Environment Variables Reference
 
-Once Phase 1 is complete, you can proceed to:
-
-### Phase 2: Backend Development (NestJS)
-- Initialize NestJS project
-- Integrate Keycloak authentication
-- Connect to Supabase
-- Implement API endpoints:
-  - `/auth/signup` - User registration
-  - `/auth/signin` - User authentication
-  - `/auth/signin-attempts` - Fetch sign-in history
-- Add geolocation service
-
-### Phase 3: Frontend Development (SvelteKit)
-- Initialize SvelteKit project
-- Create authentication flow
-- Build UI components:
-  - Landing page
-  - Sign-up form with password validation
-  - Sign-in form
-  - Dashboard with sign-in history
-
----
-
-## 📚 Additional Resources
-
-- [Supabase Documentation](https://supabase.com/docs)
-- [Keycloak Documentation](https://www.keycloak.org/documentation)
-- [NestJS Documentation](https://docs.nestjs.com/)
-- [SvelteKit Documentation](https://kit.svelte.dev/docs)
-- [OpenID Connect Specification](https://openid.net/connect/)
-
----
-
-## 📝 Notes
-
-- All services run locally during development
-- Default ports: Backend (3000), Frontend (5173), Keycloak (8080)
-- Never commit `.env` files to version control
-- Use strong passwords in production
-- Enable HTTPS for production deployments
-
----
-
-## ✅ Phase 1 Complete!
-
-If you've followed all the steps and passed the verification checklist, you're ready to move on to Phase 2! 🎉
-
----
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `POSTGRES_PASSWORD` | PostgreSQL password | `strongpassword123` |
+| `KEYCLOAK_ADMIN_PASSWORD` | Keycloak admin password | `admin123` |
+| `KEYCLOAK_CLIENT_SECRET` | Backend client secret | `secret123` |
+| `JWT_SECRET` | JWT signing secret | `jwt_secret_key` |
+| `DOMAIN` | Your domain name | `myapp.com` |
+| `SSL_EMAIL` | Email for SSL certificates | `admin@myapp.com` |
+| `SUPABASE_URL` | Supabase project URL | `https://xxx.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key | `eyJhbG...` |
+| `SUPABASE_ANON_KEY` | Anonymous key | `eyJhbG...` |
 
 ## 📞 Support
 
-If you encounter issues:
-1. Check the troubleshooting section above
-2. Review the detailed setup guides in `docs/`
-3. Verify all environment variables are correct
-4. Check service logs (Docker logs for Keycloak, Supabase logs in dashboard)
+For issues and questions:
+- GitHub Issues: [Create an issue](https://github.com/CyberFranky05/Loaction_project/issues)
+- Email: chaudharymahendra@gmail.com
 
----
+## 📄 License
 
-**Last Updated:** October 20, 2025  
-**Phase:** 1 - Infrastructure Setup  
-**Status:** ✅ Complete
+MIT License - feel free to use for your projects!
