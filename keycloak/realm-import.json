@@ -18,13 +18,16 @@
       "secret": "secret123",
       "serviceAccountsEnabled": true,
       "directAccessGrantsEnabled": true,
-      "authorizationServicesEnabled": false,
+      "authorizationServicesEnabled": true,
       "publicClient": false,
       "protocol": "openid-connect",
       "attributes": {
         "oauth2.device.authorization.grant.enabled": "false",
         "oidc.ciba.grant.enabled": "false"
-      }
+      },
+      "protocolMappers": [],
+      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"]
     },
     {
       "clientId": "location-auth-frontend",
@@ -70,5 +73,15 @@
   "registrationFlow": "registration",
   "directGrantFlow": "direct grant",
   "resetCredentialsFlow": "reset credentials",
-  "clientAuthenticationFlow": "clients"
+  "clientAuthenticationFlow": "clients",
+  "users": [
+    {
+      "username": "service-account-location-auth-backend",
+      "enabled": true,
+      "serviceAccountClientId": "location-auth-backend",
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-users", "query-users", "query-groups"]
+      }
+    }
+  ]
 }
