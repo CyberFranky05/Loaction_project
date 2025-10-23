@@ -38,6 +38,11 @@ services:
       - KC_HOSTNAME_STRICT=false
       - KC_PROXY=edge
       - KC_HTTP_ENABLED=true
+    volumes:
+      - ./keycloak/realm-import.json:/opt/keycloak/data/import/realm-import.json:ro
+    command:
+      - start
+      - --import-realm
     networks:
       - app-network
     restart: unless-stopped
