@@ -256,12 +256,4 @@ docker exec location-auth-keycloak ls /opt/keycloak/data/import/
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key | `eyJhbG...` |
 | `SUPABASE_ANON_KEY` | Anonymous key | `eyJhbG...` |
 
-## 📞 Support
 
-For issues and questions:
-- GitHub Issues: [Create an issue](https://github.com/CyberFranky05/Loaction_project/issues)
-- Email: chaudharymahendra@gmail.com
-
-## 📄 License
-
-MIT License - feel free to use for your projects!
