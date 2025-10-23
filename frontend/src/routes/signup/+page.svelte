@@ -42,13 +42,24 @@
 			
 			success = true;
 			
-			// Automatically sign in the user after successful registration
-			console.log('Auto-signing in user...');
-			await authAPI.signIn({ email, password });
-			console.log('Auto sign-in successful, redirecting to dashboard...');
+			// Wait a moment for Keycloak to finish creating the user
+			await new Promise(resolve => setTimeout(resolve, 1000));
 			
-			// Redirect to dashboard
-			goto('/dashboard');
+			// Automatically sign in the user after successful registration
+			try {
+				console.log('Auto-signing in user...');
+				await authAPI.signIn({ email, password });
+				console.log('Auto sign-in successful, redirecting to dashboard...');
+				
+				// Redirect to dashboard
+				goto('/dashboard');
+			} catch (loginErr: any) {
+				console.error('Auto-login failed:', loginErr);
+				// If auto-login fails, redirect to signin page
+				setTimeout(() => {
+					goto('/signin');
+				}, 2000);
+			}
 		} catch (err: any) {
 			console.error('Signup error:', err);
 			console.error('Error response:', err.response);
