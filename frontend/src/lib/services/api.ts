@@ -2,7 +2,10 @@ import axios from 'axios';
 import { authStore } from '$lib/stores/auth';
 import { get } from 'svelte/store';
 
-const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+// Use production URL - ENV vars don't work reliably in Docker builds
+const API_URL = process.env.NODE_ENV === 'production' 
+	? 'https://mrelectron.xyz/api/v1'
+	: import.meta.env.PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 // Create axios instance
 const api = axios.create({
