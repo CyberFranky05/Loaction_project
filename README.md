@@ -125,20 +125,43 @@ docker-compose -f docker-compose.prod.yml logs -f
 Once your domain DNS is configured:
 
 ```bash
-# Stop nginx temporarily
+# 1. Stop nginx
 docker-compose -f docker-compose.prod.yml stop nginx
 
-# Get SSL certificate
+# 2. Edit docker-compose.prod.yml to use HTTP-only config
+# Find the nginx volumes section and change:
+# FROM: - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+# TO:   - ./nginx/nginx-http-only.conf:/etc/nginx/nginx.conf:ro
+
+# Use sed to make the change automatically:
+sed -i 's|./nginx/nginx.conf:/etc/nginx/nginx.conf:ro|./nginx/nginx-http-only.conf:/etc/nginx/nginx.conf:ro|' docker-compose.prod.yml
+
+# 3. Start with HTTP-only
+docker-compose -f docker-compose.prod.yml up -d
+
+# 4. Wait and verify nginx is running
+sleep 10
+docker ps | grep nginx
+curl -I http://localhost
+
+# 5. Get SSL certificates
 docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
-  --standalone \
-  --email your@email.com \
+  --webroot \
+  --webroot-path=/var/www/certbot \
+  --email piyushsingh5629@gmail.com \
   --agree-tos \
   --no-eff-email \
-  -d yourdomain.com \
-  -d www.yourdomain.com
+  -d mrelectron.xyz \
+  -d www.mrelectron.xyz
 
-# Start nginx again
-docker-compose -f docker-compose.prod.yml start nginx
+# 6. Switch back to HTTPS config
+sed -i 's|./nginx/nginx-http-only.conf:/etc/nginx/nginx.conf:ro|./nginx/nginx.conf:/etc/nginx/nginx.conf:ro|' docker-compose.prod.yml
+
+# 7. Restart nginx with HTTPS
+docker-compose -f docker-compose.prod.yml restart nginx
+
+# 8. Test HTTPS
+curl -I https://mrelectron.xyz
 ```
 
 ### 7. Verify Keycloak Realm Import
