@@ -157,8 +157,10 @@ docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
 # 6. Switch back to HTTPS config
 sed -i 's|./nginx/nginx-http-only.conf:/etc/nginx/nginx.conf:ro|./nginx/nginx.conf:/etc/nginx/nginx.conf:ro|' docker-compose.prod.yml
 
-# 7. Restart nginx with HTTPS
-docker-compose -f docker-compose.prod.yml restart nginx
+# 7.=Force recreate nginx container with HTTPS config:
+docker stop location-auth-nginx
+docker rm location-auth-nginx
+docker-compose -f docker-compose.prod.yml up -d nginx
 
 # 8. Test HTTPS
 curl -I https://mrelectron.xyz
