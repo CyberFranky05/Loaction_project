@@ -28,6 +28,21 @@ cp .env.example .env
 Edit `.env` and fill in your values:
 
 ```bash
+# Domain Configuration
+DOMAIN=yourdomain.com
+DOMAIN_WWW=www.yourdomain.com
+
+# Port Configuration (defaults shown, change if needed)
+BACKEND_PORT=3000
+FRONTEND_PORT=3000
+KEYCLOAK_PORT=8080
+POSTGRES_PORT=5432
+NGINX_HTTP_PORT=80
+NGINX_HTTPS_PORT=443
+
+# SSL Configuration
+SSL_EMAIL=your@email.com
+
 # PostgreSQL (for Keycloak)
 POSTGRES_PASSWORD=your_strong_postgres_password
 
@@ -35,22 +50,19 @@ POSTGRES_PASSWORD=your_strong_postgres_password
 KEYCLOAK_ADMIN_PASSWORD=your_admin_password
 
 # Backend Secrets
-# NOTE: Realm is pre-configured with client secret "secret123"
-# You can change this later in Keycloak admin console
 KEYCLOAK_CLIENT_SECRET=secret123
 JWT_SECRET=your_jwt_secret
 
-# Your Domain
-DOMAIN=yourdomain.com
-
-# SSL Email (for Let's Encrypt)
-SSL_EMAIL=your@email.com
+# CORS Origin (should match your domain with https://)
+CORS_ORIGIN=https://yourdomain.com
 
 # Supabase (Create free account at https://supabase.com)
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 SUPABASE_ANON_KEY=your_anon_key
 ```
+
+**Note:** All domain references and ports are now centralized in the `.env` file. This makes it easy to change domains or ports without editing multiple configuration files.
 
 ### 3. Setup Supabase Database
 
@@ -107,7 +119,18 @@ A Record: yourdomain.com → YOUR_SERVER_IP
 A Record: www.yourdomain.com → YOUR_SERVER_IP
 ```
 
-### 5. Start the Application
+### 5. Generate Nginx Configuration (Optional)
+
+If you want to use the template approach for nginx configuration:
+
+```bash
+# Generate nginx.conf from template with your domain
+bash scripts/generate-nginx-conf.sh
+```
+
+This will create `nginx/nginx.conf` using your `.env` variables. Otherwise, the existing `nginx.conf` will be used as-is.
+
+### 6. Start the Application
 
 ```bash
 # Start all services
@@ -120,7 +143,7 @@ docker-compose -f docker-compose.prod.yml ps
 docker-compose -f docker-compose.prod.yml logs -f
 ```
 
-### 6. Setup SSL Certificates
+### 7. Setup SSL Certificates
 
 Once your domain DNS is configured:
 
@@ -128,14 +151,13 @@ Once your domain DNS is configured:
 # Stop nginx temporarily
 docker-compose -f docker-compose.prod.yml stop nginx
 
-# Get SSL certificate
+# Get SSL certificate (uses DOMAIN and DOMAIN_WWW from .env)
 docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
   --standalone \
   --email your@email.com \
   --agree-tos \
-  --no-eff-email \
-  -d yourdomain.com \
-  -d www.yourdomain.com
+  --no-eff-email
+```
 
 # Start nginx again
 docker-compose -f docker-compose.prod.yml start nginx
@@ -246,12 +268,20 @@ docker exec location-auth-keycloak ls /opt/keycloak/data/import/
 
 | Variable | Description | Example |
 |----------|-------------|---------|
+| `DOMAIN` | Your primary domain name | `myapp.com` |
+| `DOMAIN_WWW` | WWW subdomain | `www.myapp.com` |
+| `BACKEND_PORT` | Backend service port | `3000` |
+| `FRONTEND_PORT` | Frontend service port | `3000` |
+| `KEYCLOAK_PORT` | Keycloak service port | `8080` |
+| `POSTGRES_PORT` | PostgreSQL port | `5432` |
+| `NGINX_HTTP_PORT` | Nginx HTTP port | `80` |
+| `NGINX_HTTPS_PORT` | Nginx HTTPS port | `443` |
+| `SSL_EMAIL` | Email for SSL certificates | `admin@myapp.com` |
+| `CORS_ORIGIN` | CORS allowed origin | `https://myapp.com` |
 | `POSTGRES_PASSWORD` | PostgreSQL password | `strongpassword123` |
 | `KEYCLOAK_ADMIN_PASSWORD` | Keycloak admin password | `admin123` |
 | `KEYCLOAK_CLIENT_SECRET` | Backend client secret | `secret123` |
 | `JWT_SECRET` | JWT signing secret | `jwt_secret_key` |
-| `DOMAIN` | Your domain name | `myapp.com` |
-| `SSL_EMAIL` | Email for SSL certificates | `admin@myapp.com` |
 | `SUPABASE_URL` | Supabase project URL | `https://xxx.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key | `eyJhbG...` |
 | `SUPABASE_ANON_KEY` | Anonymous key | `eyJhbG...` |
