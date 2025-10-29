@@ -119,18 +119,7 @@ A Record: yourdomain.com → YOUR_SERVER_IP
 A Record: www.yourdomain.com → YOUR_SERVER_IP
 ```
 
-### 5. Generate Nginx Configuration (Optional)
-
-If you want to use the template approach for nginx configuration:
-
-```bash
-# Generate nginx.conf from template with your domain
-bash scripts/generate-nginx-conf.sh
-```
-
-This will create `nginx/nginx.conf` using your `.env` variables. Otherwise, the existing `nginx.conf` will be used as-is.
-
-### 6. Start the Application
+### 5. Start the Application
 
 ```bash
 # Start all services
@@ -143,24 +132,50 @@ docker-compose -f docker-compose.prod.yml ps
 docker-compose -f docker-compose.prod.yml logs -f
 ```
 
-### 7. Setup SSL Certificates
+### 6. Setup SSL Certificates
 
 Once your domain DNS is configured:
 
 ```bash
-# Stop nginx temporarily
+# 1. Stop nginx
 docker-compose -f docker-compose.prod.yml stop nginx
 
-# Get SSL certificate (uses DOMAIN and DOMAIN_WWW from .env)
-docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
-  --standalone \
-  --email your@email.com \
-  --agree-tos \
-  --no-eff-email
-```
+# 2. Edit docker-compose.prod.yml to use HTTP-only config
+# Find the nginx volumes section and change:
+# FROM: - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+# TO:   - ./nginx/nginx-http-only.conf:/etc/nginx/nginx.conf:ro
 
-# Start nginx again
-docker-compose -f docker-compose.prod.yml start nginx
+# Use sed to make the change automatically:
+sed -i 's|./nginx/nginx.conf:/etc/nginx/nginx.conf:ro|./nginx/nginx-http-only.conf:/etc/nginx/nginx.conf:ro|' docker-compose.prod.yml
+
+# 3. Start with HTTP-only
+docker-compose -f docker-compose.prod.yml up -d
+
+# 4. Wait and verify nginx is running
+sleep 10
+docker ps | grep nginx
+curl -I http://localhost
+
+# 5. Get SSL certificates
+docker-compose -f docker-compose.prod.yml run --rm certbot certonly \
+  --webroot \
+  --webroot-path=/var/www/certbot \
+  --email piyushsingh5629@gmail.com \
+  --agree-tos \
+  --no-eff-email \
+  -d mrelectron.xyz \
+  -d www.mrelectron.xyz
+
+# 6. Switch back to HTTPS config
+sed -i 's|./nginx/nginx-http-only.conf:/etc/nginx/nginx.conf:ro|./nginx/nginx.conf:/etc/nginx/nginx.conf:ro|' docker-compose.prod.yml
+
+# 7.=Force recreate nginx container with HTTPS config:
+docker stop location-auth-nginx
+docker rm location-auth-nginx
+docker-compose -f docker-compose.prod.yml up -d nginx
+
+# 8. Test HTTPS
+curl -I https://mrelectron.xyz
 ```
 
 ### 7. Verify Keycloak Realm Import
@@ -286,12 +301,4 @@ docker exec location-auth-keycloak ls /opt/keycloak/data/import/
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key | `eyJhbG...` |
 | `SUPABASE_ANON_KEY` | Anonymous key | `eyJhbG...` |
 
-## 📞 Support
 
-For issues and questions:
-- GitHub Issues: [Create an issue](https://github.com/CyberFranky05/Loaction_project/issues)
-- Email: chaudharymahendra@gmail.com
-
-## 📄 License
-
-MIT License - feel free to use for your projects!
