@@ -2,6 +2,7 @@
 	import { authAPI, type SignUpData } from '$lib/services/api';
 	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
 	import { isPasswordValid } from '$lib/utils/password';
+	import { getClientPublicIP } from '$lib/utils/ip';
 	import { goto } from '$app/navigation';
 
 	let name = '';
@@ -35,7 +36,15 @@
 		console.log('Submitting signup with:', { name, email });
 
 		try {
-			const data: SignUpData = { name, email, password };
+			// Fetch client's public IP for accurate geolocation
+			const clientIp = await getClientPublicIP();
+			
+			const data: SignUpData = { 
+				name, 
+				email, 
+				password,
+				...(clientIp && { clientIp })
+			};
 			console.log('Calling authAPI.signUp...');
 			const response = await authAPI.signUp(data);
 			console.log('Signup response:', response);

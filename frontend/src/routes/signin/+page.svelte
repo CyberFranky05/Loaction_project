@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { authAPI, type SignInData } from '$lib/services/api';
 	import { authStore } from '$lib/stores/auth';
+	import { getClientPublicIP } from '$lib/utils/ip';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
@@ -29,7 +30,14 @@
 		loading = true;
 
 		try {
-			const data: SignInData = { email, password };
+			// Fetch client's public IP for accurate geolocation
+			const clientIp = await getClientPublicIP();
+			
+			const data: SignInData = { 
+				email, 
+				password,
+				...(clientIp && { clientIp })
+			};
 			await authAPI.signIn(data); // authAPI.signIn already handles login
 			goto('/dashboard');
 		} catch (err: any) {
