@@ -36,7 +36,8 @@ services:
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KC_HOSTNAME=${EC2_PUBLIC_IP}
       - KC_HOSTNAME_STRICT=false
-      - KC_PROXY=edge
+      - KC_HOSTNAME_PATH=/auth
+      - KC_PROXY_HEADERS=xforwarded
       - KC_HTTP_ENABLED=true
       - KC_HTTP_RELATIVE_PATH=/auth
     volumes:
