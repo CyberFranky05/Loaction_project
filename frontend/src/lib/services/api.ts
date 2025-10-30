@@ -2,10 +2,22 @@ import axios from 'axios';
 import { authStore } from '$lib/stores/auth';
 import { get } from 'svelte/store';
 
-// Use production URL - ENV vars don't work reliably in Docker builds
-const API_URL = process.env.NODE_ENV === 'production' 
-	? 'https://mrelectron.xyz/api/v1'
-	: import.meta.env.PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+// Runtime detection for Vercel deployment
+// In production (Vercel), use relative /api path which proxies to EC2
+// In development, use localhost backend directly
+const getApiUrl = () => {
+	if (typeof window !== 'undefined') {
+		const hostname = window.location.hostname;
+		// If on Vercel (vercel.app domain), use relative path for serverless proxy
+		if (hostname.includes('vercel.app')) {
+			return '/api';
+		}
+	}
+	// Development fallback
+	return import.meta.env.PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+};
+
+const API_URL = getApiUrl();
 
 // Create axios instance
 const api = axios.create({
