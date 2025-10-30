@@ -2,7 +2,7 @@
 
 This guide explains how to deploy the Location Authentication System with:
 - **Frontend**: Hosted on Vercel (SvelteKit)
-- **Backend + Keycloak + PostgreSQL**: Hosted on EC2 via Docker
+- **Backend + Keycloak + PostgreSQL**: Hosted on EC2 via Docker (HTTP only, using EC2 public IP)
 
 ## Architecture Overview
 
@@ -10,14 +10,15 @@ This guide explains how to deploy the Location Authentication System with:
 ┌─────────────────┐
 │  Vercel         │
 │  (Frontend)     │ ──────┐
-└─────────────────┘       │
-                          │ HTTPS
+│  HTTPS          │       │
+└─────────────────┘       │ HTTP
                           ▼
                   ┌───────────────────┐
                   │   AWS EC2         │
+                  │  (Public IP)      │
                   │  ┌─────────────┐  │
                   │  │   Nginx     │  │
-                  │  │   (Proxy)   │  │
+                  │  │   (Port 80) │  │
                   │  └──────┬──────┘  │
                   │         │         │
                   │    ┌────┴────┐    │
@@ -33,14 +34,19 @@ This guide explains how to deploy the Location Authentication System with:
                   └───────────────────┘
 ```
 
+**Note**: This setup uses HTTP (not HTTPS) for the backend since SSL certificates require a domain name. The frontend on Vercel will use HTTPS.
+
 ## Prerequisites
 
 1. **Vercel Account**: Sign up at https://vercel.com
 2. **AWS EC2 Instance**: Ubuntu server with Docker installed
-3. **Domain**: Two subdomains configured:
-   - `your-app.vercel.app` (or custom domain on Vercel)
-   - `api.yourdomain.com` (pointing to EC2 IP)
+3. **EC2 Security Group**: Allow inbound traffic on port 80 (HTTP)
 4. **GitHub Repository**: Code pushed to GitHub
+
+**Important**: This setup uses HTTP on the backend (no SSL). For production with sensitive data, consider:
+- Using a custom domain with SSL certificate
+- Setting up a VPN or private network
+- Using AWS Certificate Manager with Application Load Balancer
 
 ## Part 1: Backend Deployment (EC2)
 
@@ -70,8 +76,8 @@ nano .env
 
 Update these critical values:
 ```bash
-# Your backend API subdomain
-BACKEND_DOMAIN=api.yourdomain.com
+# Your EC2 public IP address
+EC2_PUBLIC_IP=3.XXX.XXX.XXX
 
 # Your Vercel frontend URL (add after deploying to Vercel)
 VERCEL_FRONTEND_URL=https://your-app.vercel.app
@@ -86,10 +92,9 @@ KEYCLOAK_CLIENT_SECRET=<your-keycloak-secret>
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<your-key>
 SUPABASE_ANON_KEY=<your-key>
-
-# SSL email for Let's Encrypt
-SSL_EMAIL=your@email.com
 ```
+
+**Note**: No SSL_EMAIL needed since we're using HTTP without SSL certificates.
 
 ### Step 3: Generate Nginx Configuration
 
@@ -100,8 +105,8 @@ cat > scripts/generate-nginx-backend.sh << 'EOF'
 set -a
 source .env
 set +a
-envsubst '${BACKEND_DOMAIN} ${BACKEND_PORT} ${KEYCLOAK_PORT} ${VERCEL_FRONTEND_URL}' \
-  < nginx/nginx.backend.conf.template \
+envsubst '${BACKEND_PORT} ${KEYCLOAK_PORT} ${VERCEL_FRONTEND_URL}' \
+  < nginx/nginx.backend.http.conf.template \
   > nginx/nginx.backend.conf
 EOF
 
@@ -111,28 +116,20 @@ chmod +x scripts/generate-nginx-backend.sh
 ./scripts/generate-nginx-backend.sh
 ```
 
-### Step 4: Configure DNS
+### Step 4: Configure EC2 Security Group
 
-In your DNS provider (e.g., Cloudflare):
-1. Add an A record: `api.yourdomain.com` → `your-ec2-public-ip`
-2. Set to **DNS only** (gray cloud) initially for SSL certificate generation
+In AWS Console → EC2 → Security Groups:
+1. Select your EC2 instance's security group
+2. Add inbound rule:
+   - **Type**: HTTP
+   - **Port**: 80
+   - **Source**: 0.0.0.0/0 (anywhere)
+3. Make sure SSH (port 22) is also allowed for your IP
 
 ### Step 5: Deploy Backend Services
 
 ```bash
-# Stop containers (if running)
-docker-compose -f docker-compose.backend.yml down
-
-# Get SSL certificate
-docker-compose -f docker-compose.backend.yml run --rm certbot certonly \
-  --standalone \
-  --preferred-challenges http \
-  --email your@email.com \
-  --agree-tos \
-  --no-eff-email \
-  -d api.yourdomain.com
-
-# Start all services
+# Start all services (no SSL certificate needed)
 docker-compose -f docker-compose.backend.yml up -d
 
 # Check status
@@ -142,30 +139,35 @@ docker ps
 ### Step 6: Verify Backend
 
 ```bash
-# Test health endpoint
-curl https://api.yourdomain.com/health
+# Get your EC2 public IP
+curl ifconfig.me
+
+# Test health endpoint (replace with your IP)
+curl http://YOUR-EC2-IP/health
 
 # Test API endpoint
-curl https://api.yourdomain.com/api/health
+curl http://YOUR-EC2-IP/api/health
 
 # Test Keycloak
-curl https://api.yourdomain.com/auth/realms/location-auth-realm
+curl http://YOUR-EC2-IP/auth/realms/location-auth-realm
 ```
 
 ### Step 7: Update Keycloak Configuration
 
-1. Open Keycloak admin console: `https://api.yourdomain.com/auth/admin`
+1. Open Keycloak admin console: `http://YOUR-EC2-IP/auth/admin`
 2. Login with credentials from `.env` (KEYCLOAK_ADMIN_PASSWORD)
 3. Navigate to: **Clients** → **location-auth-frontend**
 4. Update **Valid Redirect URIs**:
    ```
    https://your-app.vercel.app/*
    https://*.vercel.app/*
+   http://localhost:*
    ```
 5. Update **Web Origins**:
    ```
    https://your-app.vercel.app
    https://*.vercel.app
+   http://localhost:5173
    ```
 6. Click **Save**
 
@@ -202,13 +204,15 @@ git push origin vercel-deployment
 In Vercel dashboard → Settings → Environment Variables, add:
 
 ```bash
-PUBLIC_API_URL=https://api.yourdomain.com
-PUBLIC_KEYCLOAK_URL=https://api.yourdomain.com/auth
+PUBLIC_API_URL=http://YOUR-EC2-PUBLIC-IP
+PUBLIC_KEYCLOAK_URL=http://YOUR-EC2-PUBLIC-IP/auth
 PUBLIC_KEYCLOAK_REALM=location-auth-realm
 PUBLIC_KEYCLOAK_CLIENT_ID=location-auth-frontend
 PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 ```
+
+**Replace `YOUR-EC2-PUBLIC-IP`** with your actual EC2 public IP address (e.g., `3.XXX.XXX.XXX`).
 
 ### Step 4: Deploy
 
@@ -247,20 +251,19 @@ docker-compose -f docker-compose.backend.yml restart nginx
 3. Test location features
 4. Check browser console for any CORS errors
 
-## Part 3: Custom Domain (Optional)
+## Part 3: Testing & Verification
 
-### For Vercel Frontend
+### Mixed Content Warning
 
-1. In Vercel dashboard → Settings → Domains
-2. Add your custom domain (e.g., `app.yourdomain.com`)
-3. Follow Vercel's DNS instructions
-4. Update Keycloak redirect URIs with new domain
+Modern browsers may show warnings when HTTPS frontend (Vercel) calls HTTP backend (EC2). To handle this:
 
-### For EC2 Backend
+1. **Development**: Browsers will allow it
+2. **Production**: Consider one of these options:
+   - Get a domain and SSL certificate (recommended)
+   - Use Cloudflare Tunnel or ngrok for HTTPS
+   - Deploy backend on a platform with free SSL (Render, Railway, etc.)
 
-Already configured via `BACKEND_DOMAIN` in `.env`
-
-## Monitoring & Logs
+### Test the Application
 
 ### Backend Logs (EC2)
 
@@ -302,16 +305,17 @@ docker logs -f location-auth-nginx
    - `https://your-app.vercel.app/*`
    - `https://*.vercel.app/*` (for preview deployments)
 
-### SSL Certificate Issues
+### Mixed Content Errors
 
-**Symptom**: "ERR_CERT_AUTHORITY_INVALID" or similar
+**Symptom**: Browser blocks HTTP requests from HTTPS site, "Mixed Content" error
 
 **Solution**:
-```bash
-# On EC2, renew certificate
-docker-compose -f docker-compose.backend.yml run --rm certbot renew
-docker-compose -f docker-compose.backend.yml restart nginx
-```
+1. **Short-term**: Test with browser security relaxed (not recommended for production)
+2. **Long-term**: Get a domain and SSL certificate for backend:
+   - Register a cheap domain ($10-15/year)
+   - Point subdomain to EC2 IP
+   - Use Let's Encrypt for free SSL
+   - Update all configs to use HTTPS
 
 ### Backend Not Responding
 
@@ -365,21 +369,35 @@ Vercel will automatically build and deploy the new version.
 ## Cost Estimates
 
 - **Vercel**: Free tier (100GB bandwidth, unlimited deployments)
-- **AWS EC2**: ~$10-30/month (t3.small or t3.medium)
-- **Domain**: ~$10-15/year
-- **Total**: ~$10-30/month + domain
+- **AWS EC2**: ~$10-30/month (t3.small or t3.medium recommended)
+- **Total**: ~$10-30/month
+
+**Optional add-ons**:
+- Domain name: ~$10-15/year
+- SSL certificate: Free (Let's Encrypt) with domain
+
+## Upgrading to HTTPS (Recommended for Production)
+
+If you want to add SSL to your backend later:
+
+1. **Get a domain**: Register at Namecheap, GoDaddy, or Cloudflare
+2. **Point to EC2**: Add A record `api.yourdomain.com` → EC2 IP
+3. **Update configs**: 
+   - Change `EC2_PUBLIC_IP` to `BACKEND_DOMAIN` in `.env`
+   - Use `nginx.backend.conf.template` (HTTPS version)
+   - Run certbot to get SSL certificate
+4. **Update Vercel**: Change `PUBLIC_API_URL` from `http://` to `https://`
 
 ## Security Checklist
 
-- [ ] SSL certificates configured for both frontend and backend
+- [ ] EC2 security group allows only necessary ports (80, 22)
 - [ ] Strong passwords for PostgreSQL and Keycloak
 - [ ] JWT secret is random and secure
-- [ ] Keycloak admin console not publicly accessible (only via EC2)
 - [ ] Environment variables not committed to Git
 - [ ] CORS properly configured (not allowing *)
 - [ ] Security headers enabled in nginx
 - [ ] Rate limiting configured in nginx
-- [ ] EC2 security groups properly configured (only 80, 443, 22)
+- [ ] Consider adding HTTPS with domain + SSL certificate for production
 
 ## Support
 
