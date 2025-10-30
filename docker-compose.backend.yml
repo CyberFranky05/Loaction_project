@@ -36,6 +36,7 @@ services:
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KC_HOSTNAME=${EC2_PUBLIC_IP}
       - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_PATH=/auth
       - KC_PROXY=edge
       - KC_HTTP_ENABLED=true
     volumes:
@@ -43,6 +44,7 @@ services:
     command:
       - start
       - --import-realm
+      - --http-relative-path=/auth
     networks:
       - app-network
     restart: unless-stopped
