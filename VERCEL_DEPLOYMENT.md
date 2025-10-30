@@ -143,18 +143,18 @@ docker ps
 curl ifconfig.me
 
 # Test health endpoint (replace with your IP)
-curl http://YOUR-EC2-IP/health
+curl http://13.232.210.108/health
 
 # Test API endpoint
-curl http://YOUR-EC2-IP/api/health
+curl http://13.232.210.108/api/health
 
 # Test Keycloak
-curl http://YOUR-EC2-IP/auth/realms/location-auth-realm
+curl http://13.232.210.108/auth/realms/location-auth-realm
 ```
 
 ### Step 7: Update Keycloak Configuration
 
-1. Open Keycloak admin console: `http://YOUR-EC2-IP/auth/admin`
+1. Open Keycloak admin console: `http://13.232.210.108/auth/admin`
 2. Login with credentials from `.env` (KEYCLOAK_ADMIN_PASSWORD)
 3. Navigate to: **Clients** → **location-auth-frontend**
 4. Update **Valid Redirect URIs**:
